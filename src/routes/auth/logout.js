@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post("/", authMiddleware, (req,res) => {
     res.clearCookie("token");
-    req.json({message: "Sesion Cerrada"});
+    res.json({message: "Sesion Cerrada"});
 })
 
 export default router;
