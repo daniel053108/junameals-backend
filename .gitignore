@@ -1,0 +1,67 @@
+# =====================
+# dependencies
+# =====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =====================
+# environment variables
+# =====================
+.env
+.env.*
+!.env.example
+
+# =====================
+# build / output
+# =====================
+dist/
+build/
+
+# =====================
+# logs
+# =====================
+logs/
+*.log
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =====================
+# editors / IDEs
+# =====================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =====================
+# testing
+# =====================
+coverage/
+.nyc_output/
+
+# =====================
+# database
+# =====================
+*.sqlite
+*.sqlite3
+*.db
+
+# =====================
+# uploads / temp files
+# =====================
+uploads/
+tmp/
+temp/
+
+# =====================
+# cache
+# =====================
+.cache/
