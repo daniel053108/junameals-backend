@@ -42,6 +42,11 @@ router.post("/", async (req,res) => {
             "INSERT INTO users(name,email,password_hash) VALUES ($1,$2,$3) RETURNING id, name, email", 
             [user_name, email, passwordHash]);
         
+        const resultCart = await pool.query(
+            "INSERT INTO carts(user_id) VALUES ($1) RETURNING id",
+            [result.rows[0].id]
+        );    
+
         res.status(201).json({
             user: result.rows[0],
         });

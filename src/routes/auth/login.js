@@ -32,8 +32,29 @@ router.post("/", async (req, res) => {
         });
     }
 
+    const userCart = await pool.query(
+        "SELECT id FROM carts WHERE user_id = $1",
+        [user.id]
+    )
+    
+    let cartId;
+
+    if(userCart.rows.length === 0){
+        const newCart = await pool.query(
+            "INSERT INTO carts(user_id) VALUES ($1) RETURNING id",
+            [user.id]
+        );
+        cartId = newCart.rows[0].id;
+    }else{
+        cartId = userCart.rows[0].id;
+    }
+
     const token = jwt.sign(
-        {id: user.id, email: user.email},
+        {
+            id: user.id, 
+            email: user.email, 
+            id_cart: cartId
+        },
         process.env.JWT_SECRET,
         {expiresIn: "1d"}
     );
