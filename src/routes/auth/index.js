@@ -2,7 +2,7 @@ import express from "express";
 import routerLogin from "./login.js";
 import routerRegister from "./register.js";
 import routerLogout from "./logout.js";
-import routerStatus from "./status.js";
+import routerStatus from "./me.js";
 import routerCartStatus from "./cartStatus.js";
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.use("/login", routerLogin);
 
 router.use("/logout", routerLogout);
 
-router.use("/status", routerStatus);
+router.use("/me", routerStatus);
 
 router.use("/cartStatus", routerCartStatus);
 export default router;

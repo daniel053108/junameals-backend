@@ -16,7 +16,7 @@ router.post("/", async (req,res) => {
 
         if(password.length < 8){
             return res.status(400).json({
-                error: "La contraseña debe tener un minimo de 8 digitos",
+                error: "La contraseña nueva debe tener mínimo 8 caracteres, una mayúscula y un carácter especial",
             })
         }
         

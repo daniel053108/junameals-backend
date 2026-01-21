@@ -54,6 +54,11 @@ router.post("/addToCart" , authMiddleware, async (req,res) => {
 
 router.get("/getCartItems", authMiddleware, async (req,res) =>{
     const { cartId } = req.query;
+
+    if(!cartId){
+        return res.json({error: "cartId aun no cargado"});
+    }
+
     try{
         const cartItems = await pool.query(
             "SELECT id,quantity,price FROM cart_items WHERE cart_id = $1",
@@ -89,32 +94,53 @@ router.get("/getCartProducts", authMiddleware, async (req,res) => {
 router.delete("/removeFromCart/cart/:cartId/item/:itemId", authMiddleware, async (req,res) => {
     const { cartId, itemId } = req.params;
 
-    const item = await pool.query(
-        "SELECT id, quantity, price FROM cart_items WHERE cart_id = $1 AND id = $2",
-        [cartId, itemId]
-    );
+    if(!cartId || !itemId) return res.status(400).json({error: "Parametros no cargados o indefinidos"});
+    try{
+        const item = await pool.query(
+            "SELECT id, quantity, price FROM cart_items WHERE cart_id = $1 AND product_id = $2",
+            [cartId, itemId]
+        );
+        if(item.rows.length === 0){
+            return res.status(404).json({error: "Producto no encontrado"});
+        }
 
-    if(item.rows.length === 0){
-        return res.status(404).json({error: "Producto no encontrado"});
+        let itemRemoved;
+        if(item.rows[0].quantity === 1){
+            itemRemoved = await pool.query(
+                "DELETE FROM cart_items WHERE id = $1 AND cart_id = $2 RETURNING id,price",
+                [item.rows[0].id,cartId]
+            );
+        }else if(item.rows[0].quantity > 1){
+            const newQuantity = item.rows[0].quantity - 1;
+            itemRemoved = await pool.query(
+                "UPDATE cart_items SET quantity = $1 WHERE id = $2 AND cart_id = $3 RETURNING id, quantity, price",
+                [newQuantity, item.rows[0].id, cartId]
+            );
+        };
+
+        return res.status(200).json(itemRemoved.rows[0]);
+    }catch(error){
+        return res.status(500).json({error: "Error al eliminar el item del carrito"});
     }
-
-    await pool.query(
-        "DELETE FROM cart_items WHERE id = $1",
-        [itemId]
-    );
-
-    res.status(200).json(item.rows[0]);
 });
 
-router.delete("/clearCart/:cartId", authMiddleware, async (req,res) => {
+router.delete("/clearCart/cart/:cartId", authMiddleware, async (req,res) => {
     const { cartId } = req.params;
 
-    const existCart = await pool.query(
-        "DELETE FROM cart_items WHERE cart_id = $1",
-        [cartId]
-    );
+    try{ 
+        const removedCarts = await pool.query(
+            "DELETE FROM cart_items WHERE cart_id = $1 RETURNING id",
+            [cartId]
+        );
 
-    res.sendStatus(204);
+        if(removedCarts.rows.length === 0){
+            return res.status(400).json({error: "No hay productos en el carrito"});
+        }
+
+        res.sendStatus(204);
+    }catch(error){
+        return res.status(500).json({error: "Error al limpiar el carrito"});
+    }
 });
 
 export default router;

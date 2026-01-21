@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import  express from "express";
 import jwt from "jsonwebtoken";
-import authMiddleware from "../../middlewares/authMiddleware.js";
 import pool from "../../db.js";
 
 const router = express.Router();
@@ -15,7 +14,10 @@ router.post("/", async (req, res) => {
         });
     };
 
-    const usersExist = await pool.query("SELECT id,name,email,password_hash FROM users WHERE email = $1 OR name = $1", [user_email]);
+    const usersExist = await pool.query(
+        "SELECT id,name,email,password_hash FROM users WHERE email = $1 OR name = $1",
+        [user_email]
+    );
     
     if(usersExist.rows.length === 0){
         return res.status(400).json({
@@ -36,7 +38,7 @@ router.post("/", async (req, res) => {
         "SELECT id FROM carts WHERE user_id = $1",
         [user.id]
     )
-    
+     
     let cartId;
 
     if(userCart.rows.length === 0){
@@ -51,7 +53,8 @@ router.post("/", async (req, res) => {
 
     const token = jwt.sign(
         {
-            id: user.id, 
+            id: user.id,
+            name: user.name,
             email: user.email, 
             id_cart: cartId
         },
