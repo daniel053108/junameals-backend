@@ -71,21 +71,6 @@ export const handleMpWebhookService = async (payload) => {
             ]
         );
 
-        // Guardar pago
-        await client.query(
-            `INSERT INTO payments
-             (order_id, provider, provider_payment_id, status, amount, currency, raw_response)
-             VALUES ($1, 'mercadopago', $2, $3, $4, $5, $6)`,
-            [
-                orderId,
-                payment.id,
-                payment.status,
-                payment.transaction_amount,
-                payment.currency_id,
-                payment
-            ]
-        );
-
         //Actualizar pedido (solo si no está paid)
         if (order.status !== "paid") {
             if (payment.status === "approved") {
@@ -102,6 +87,8 @@ export const handleMpWebhookService = async (payload) => {
         }
 
         await client.query("COMMIT");
+
+
 
     } catch (error) {
         await client.query("ROLLBACK");

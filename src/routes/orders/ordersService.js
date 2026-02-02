@@ -7,7 +7,7 @@ export const createOrderService = async (userId, items) => {
     try {
         await client.query("BEGIN");
 
-        const productIds = items.map(i => i.productId);
+        const productIds = items.map(i => i.id);
 
         const { rows: products } = await client.query(
             `SELECT id, name, price
@@ -23,12 +23,13 @@ export const createOrderService = async (userId, items) => {
         let total = 0;
         const itemsMap = {};
 
-        items.forEach(i => itemsMap[i.productId] = i.quantity);
+        items.forEach(i => itemsMap[i.id] = !i.quantity ? 1 : i.quantity );
 
         products.forEach(p => {
             total += p.price * itemsMap[p.id];
         });
 
+        console.log(items);
         const { rows: [order] } = await client.query(
             `INSERT INTO orders (user_id, total_amount, status)
              VALUES ($1, $2, 'pending')

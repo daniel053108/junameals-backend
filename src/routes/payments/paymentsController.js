@@ -1,16 +1,16 @@
 import authMiddleware from "../../middlewares/authMiddleware.js";
-import { createMpPreferenceService } from "../payments/paymentsServices.js";
+import { createMpPreferenceService } from "./paymentsServices.js";
 import express from "express";
 
 const router = express.Router();
 
-router.get("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {    
     try {
         const userId = req.user.id;
-        const { orderId } = req.body;
+        const  orderId  = req.body.id;
 
         const preference = await createMpPreferenceService(userId, orderId);
-
+        
         res.json(preference);
     } catch (error) {
         console.error(error);

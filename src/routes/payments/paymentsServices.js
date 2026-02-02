@@ -1,6 +1,6 @@
 // services/payments.service.js
 import pool from "../../db.js";
-import mercadopago from "../../config/mercadopago.js";
+import MPpreference  from "../../config/mercadopago.js";
 
 export const createMpPreferenceService = async (userId, orderId) => {
 
@@ -24,7 +24,6 @@ export const createMpPreferenceService = async (userId, orderId) => {
          WHERE order_id = $1`,
         [orderId]
     );
-
     //Construir preferencia
     const preference = {
         items: items.map(i => ({
@@ -34,19 +33,17 @@ export const createMpPreferenceService = async (userId, orderId) => {
         })),
         external_reference: order.id.toString(),
         back_urls: {
-            success: `${process.env.FRONT_URL}/pago/exito`,
-            failure: `${process.env.FRONT_URL}/pago/error`,
-            pending: `${process.env.FRONT_URL}/pago/pendiente`
+            success: `${process.env.FRONT_URL}/payment/success`,
+            failure: `${process.env.FRONT_URL}/payment/error`,
+            pending: `${process.env.FRONT_URL}/payment/pending?orderId=${orderId}`
         },
-        auto_return: "approved",
-        notification_url: "https://TU_BACKEND.com/api/webhooks/mercadopago"
+        //auto_return: "approved"
     };
-
-    // 4️⃣ Crear preferencia en MP
-    const response = await mercadopago.preferences.create(preference);
-
+    //Crear preferencia en MP
+    const response = await MPpreference.create({body:preference});
+    console.log(response)
     return {
-        init_point: response.body.init_point,
-        sandbox_init_point: response.body.sandbox_init_point
+        init_point: response.init_point,
+        sandbox_init_point: response.sandbox_init_point
     };
 };

@@ -3,6 +3,6 @@ import routePaymentController from "./paymentsController.js";
 
 const router = express.Router();
 
-router.use("/", routePaymentController);
+router.use("/preference", routePaymentController);
 
 export default router;

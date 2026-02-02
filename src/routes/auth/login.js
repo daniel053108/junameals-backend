@@ -15,7 +15,7 @@ router.post("/", async (req, res) => {
     };
 
     const usersExist = await pool.query(
-        "SELECT id,name,email,password_hash FROM users WHERE email = $1 OR name = $1",
+        "SELECT id,name,email,password_hash,role FROM users WHERE email = $1 OR name = $1",
         [user_email]
     );
     
@@ -54,6 +54,7 @@ router.post("/", async (req, res) => {
     const token = jwt.sign(
         {
             id: user.id,
+            role: user.role,
             name: user.name,
             email: user.email, 
             id_cart: cartId

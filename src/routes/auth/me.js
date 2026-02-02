@@ -30,6 +30,7 @@ router.get("/getUser", authMiddleware, async (req,res) => {
 
         return res.status(200).json({
             id: user.id,
+            role: user.role,
             name: userData.rows[0].name,
             email: userData.rows[0].email,
             id_cart: userCart.rows[0].id
@@ -46,7 +47,8 @@ router.get("/getAddresses", authMiddleware,async (req,res) => {
         const addresses = await pool.query(
             `SELECT id, street, neighborhood, city, state, postal_code, country, delivery_notes, is_default 
             FROM Addresses 
-            WHERE user_id = $1`,
+            WHERE user_id = $1
+            ORDER BY is_default DESC`,
         [userId]);
         
         if(addresses.rows.length === 0){
