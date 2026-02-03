@@ -8,16 +8,27 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Postman / server-to-server
+
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("No permitido por CORS"));
+    }
+  },
   credentials: true,
 }));
+
 
 app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api" , routes);
 
-app.listen(PORT, () => {
-  console.log(`🔥 Backend corriendo en http://localhost:${PORT}`);
-});
+app.listen(PORT);
 
