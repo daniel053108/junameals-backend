@@ -33,11 +33,13 @@ export const createMpPreferenceService = async (userId, orderId) => {
         })),
         external_reference: order.id.toString(),
         back_urls: {
-            success: `${process.env.FRONT_URL}/payment/success`,
-            failure: `${process.env.FRONT_URL}/payment/error`,
-            pending: `${process.env.FRONT_URL}/payment/pending?orderId=${orderId}`
+            success: `${process.env.FRONTEND_URL}/payment/success`,
+            failure: `${process.env.FRONTEND_URL}/payment/error`,
+            pending: `${process.env.FRONTEND_URL}/payment/pending?orderId=${orderId}`
         },
-        //auto_return: "approved"
+        notification_url: `${process.env.BACKEND_URL}/api/webhooks/mercadopago`,
+
+        auto_return: "approved"
     };
     //Crear preferencia en MP
     const response = await MPpreference.create({body:preference});
