@@ -1,11 +1,7 @@
 import mercadopago from "../../config/mercadopago.js";
 import pool from "../../db.js";
 
-export const handleMpWebhookService = async (payload) => {
-
-    if (payload.type !== "payment") return;
-
-    const paymentId = payload.data.id;
+export const handleMpWebhookService = async (paymentId) => {
 
     //Consultar pago real en MP
     const paymentResponse = await mercadopago.payment.findById(paymentId);
