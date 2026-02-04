@@ -4,11 +4,20 @@ import pool from "../../db.js";
 export const handleMpWebhookService = async (paymentId) => {
 
     //Consultar pago real en MP
-    const paymentResponse = await mpPayment.get({
-        id: paymentId
-    });
+    let paymentResponse;
 
-    const payment = paymentResponse.body;
+    try {
+        paymentResponse = await mpPayment.get({ id: paymentId });
+    } catch (error) {
+        // Pago aún no existe o no es un payment
+        if (error?.status === 404) {
+            return;
+        }
+        throw error;
+    }
+
+    const payment = paymentResponse?.body;
+    if (!payment) return;
 
     const orderId = payment.external_reference;
     if (!orderId) return;
