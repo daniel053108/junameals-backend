@@ -1,6 +1,6 @@
 // services/payments.service.js
 import pool from "../../db.js";
-import MPpreference  from "../../config/mercadopago.js";
+import { mpPreference }  from "../../config/mercadopago.js";
 
 export const createMpPreferenceService = async (userId, orderId) => {
 
@@ -42,8 +42,7 @@ export const createMpPreferenceService = async (userId, orderId) => {
         auto_return: "approved"
     };
     //Crear preferencia en MP
-    const response = await MPpreference.create({body:preference});
-    console.log(response)
+    const response = await mpPreference.create({body:preference});
     return {
         init_point: response.init_point,
         sandbox_init_point: response.sandbox_init_point
