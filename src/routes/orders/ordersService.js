@@ -1,4 +1,3 @@
-// services/orders.service.js
 import pool from "../../db.js";
 
 export const createOrderService = async (userId, items) => {
@@ -29,7 +28,6 @@ export const createOrderService = async (userId, items) => {
             total += p.price * itemsMap[p.id];
         });
 
-        console.log(items);
         const { rows: [order] } = await client.query(
             `INSERT INTO orders (user_id, total_amount, status)
              VALUES ($1, $2, 'pending')
