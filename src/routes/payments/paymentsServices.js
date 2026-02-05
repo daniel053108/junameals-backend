@@ -32,6 +32,14 @@ export const createMpPreferenceService = async (userId, orderId) => {
             quantity: i.quantity
         })),
         external_reference: order.id.toString(),
+        payment_methods: {
+            excluded_payment_types: [
+                { id: "ticket" },        
+                { id: "atm" },           
+                { id: "bank_transfer" }  
+            ],
+            installments: 1
+            },
         back_urls: {
             success: `${process.env.FRONTEND_URL}/payment/success`,
             failure: `${process.env.FRONTEND_URL}/payment/error`,
