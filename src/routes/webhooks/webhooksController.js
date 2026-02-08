@@ -2,6 +2,7 @@ import { handleMpWebhookService } from "./webhooksService.js";
 
 export const mercadopagoWebhook = async (req, res) => {
     try {
+        console.log(req);
         const paymentId =
             req.body?.data?.id ||
             req.query?.id;
