@@ -2,13 +2,13 @@
 import pool from "../../db.js";
 import { mpPreference }  from "../../config/mercadopago.js";
 
-export const createMpPreferenceService = async (userId, orderId) => {
+export const createMpPreferenceService = async (user, orderId) => {
 
     //Validar pedido
     const { rows: orders } = await pool.query(
         `SELECT * FROM orders
          WHERE id = $1 AND user_id = $2 AND status = 'pending'`,
-        [orderId, userId]
+        [orderId, user.id]
     );
 
     if (!orders.length) {
@@ -45,8 +45,11 @@ export const createMpPreferenceService = async (userId, orderId) => {
             failure: `${process.env.FRONTEND_URL}/payment/error`,
             pending: `${process.env.FRONTEND_URL}/payment/pending?orderId=${orderId}`
         },
+        payer:{
+            email: user.email
+        },
+        statement_descriptor: "JUNAMEALS",
         notification_url: `${process.env.BACKEND_URL}/api/webhooks/mercadopago`,
-
         auto_return: "approved"
     };
     //Crear preferencia en MP

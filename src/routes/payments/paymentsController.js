@@ -6,10 +6,10 @@ const router = express.Router();
 
 router.post("/", authMiddleware, async (req, res) => {    
     try {
-        const userId = req.user.id;
+        const user = req.user;
         const  orderId  = req.body.id;
 
-        const preference = await createMpPreferenceService(userId, orderId);
+        const preference = await createMpPreferenceService(user, orderId);
         
         res.json(preference);
     } catch (error) {
