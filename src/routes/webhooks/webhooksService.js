@@ -1,106 +1,89 @@
+// webhooksService.js
 import { mpPayment } from "../../config/mercadopago.js";
 import pool from "../../db.js";
 
 export const handleMpWebhookService = async (paymentId) => {
-
-    //Consultar pago real en MP
-    let paymentResponse;
+    let payment;
 
     try {
-        paymentResponse = await mpPayment.get({ id: paymentId });
+        // En la SDK v2, el resultado es directamente el objeto del pago
+        payment = await mpPayment.get({ id: paymentId });
     } catch (error) {
-        // Pago aún no existe o no es un payment
-        if (error?.status === 404) {
-            return;
-        }
+        if (error?.status === 404) return;
         throw error;
     }
 
-    const payment = paymentResponse?.body;
-    if (!payment) return;
-
+    // Extraer datos necesarios
     const orderId = payment.external_reference;
-    if (!orderId) return;
+    const { status, transaction_amount, currency_id, id: providerId } = payment;
 
-    const client = await pool.connect();
+    if (!orderId) {
+        console.warn(`El pago ${paymentId} no tiene external_reference (orderId).`);
+        return;
+    }
+
+    const dbClient = await pool.connect();
 
     try {
-        await client.query("BEGIN");
+        await dbClient.query("BEGIN");
 
-        // Obtener pedido
-        const { rows: orders } = await client.query(
-            `SELECT id, total_amount, currency, status
-             FROM orders
-             WHERE id = $1`,
+        // 1. Obtener y bloquear la fila del pedido para evitar condiciones de carrera
+        const { rows: orders } = await dbClient.query(
+            `SELECT id, total_amount, currency, status FROM orders WHERE id = $1 FOR UPDATE`,
             [orderId]
         );
 
-        if (!orders.length) {
-            throw new Error("Pedido no existe");
-        }
-
+        if (!orders.length) throw new Error(`El pedido ${orderId} no existe en la base de datos.`);
         const order = orders[0];
 
-        //Validar monto y moneda
-        if (
-            Number(payment.transaction_amount) !== Number(order.total_amount) ||
-            payment.currency_id !== order.currency
-        ) {
-            throw new Error("Monto o moneda no coinciden");
+        // 2. Validar integridad (Monto y Moneda)
+        if (Number(transaction_amount) !== Number(order.total_amount) || currency_id !== order.currency) {
+            throw new Error("Fraude detectado: El monto o la moneda no coinciden.");
         }
 
-        //Verificar pago duplicado
-        const { rows: existing } = await client.query(
-            `SELECT id FROM payments
-             WHERE provider = 'mercadopago'
-             AND provider_payment_id = $1`,
-            [payment.id]
+        // 3. Verificar si el pago ya fue registrado (Idempotencia)
+        const { rows: existing } = await dbClient.query(
+            `SELECT id FROM payments WHERE provider = 'mercadopago' AND provider_payment_id = $1`,
+            [String(providerId)]
         );
 
         if (existing.length) {
-            await client.query("ROLLBACK");
-            return; // webhook repetido, salimos tranquilos
+            console.log(`Pago ${providerId} ya estaba procesado. Saltando...`);
+            await dbClient.query("ROLLBACK");
+            return;
         }
 
-        //Guardar pago
-        await client.query(
-            `INSERT INTO payments
-             (order_id, provider, provider_payment_id, status, amount, currency, raw_response)
-             VALUES ($1, 'mercadopago', $2, $3, $4, $5, $6)
-             ON CONFLICT DO NOTHING`,
-            [
-                orderId,
-                payment.id,
-                payment.status,
-                payment.transaction_amount,
-                payment.currency_id,
-                payment
-            ]
+        // 4. Registrar el pago
+        await dbClient.query(
+            `INSERT INTO payments 
+            (order_id, provider, provider_payment_id, status, amount, currency, raw_response)
+            VALUES ($1, 'mercadopago', $2, $3, $4, $5, $6)`,
+            [orderId, String(providerId), status, transaction_amount, currency_id, JSON.stringify(payment)]
         );
 
-        //Actualizar pedido (solo si no está paid)
+        // 5. Actualizar estado del pedido
         if (order.status !== "paid") {
-            if (payment.status === "approved") {
-                await client.query(
-                    `UPDATE orders SET status = 'paid' WHERE id = $1`,
-                    [orderId]
+            let newStatus = order.status;
+            if (status === "approved") newStatus = "paid";
+            else if (status === "rejected" || status === "cancelled") newStatus = "failed";
+
+            if (newStatus !== order.status) {
+                await dbClient.query(
+                    `UPDATE orders SET status = $1 WHERE id = $2`,
+                    [newStatus, orderId]
                 );
-            } else if (payment.status === "rejected") {
-                await client.query(
-                    `UPDATE orders SET status = 'failed' WHERE id = $1`,
-                    [orderId]
-                );
+                console.log(`Pedido ${orderId} actualizado a estado: ${newStatus}`);
             }
         }
 
-        await client.query("COMMIT");
-
-
+        await dbClient.query("COMMIT");
+        console.log(`Proceso completado con éxito para el pago ${paymentId}`);
 
     } catch (error) {
-        await client.query("ROLLBACK");
+        await dbClient.query("ROLLBACK");
+        console.error(`Error en la transacción del pago ${paymentId}:`, error.message);
         throw error;
     } finally {
-        client.release();
+        dbClient.release();
     }
 };

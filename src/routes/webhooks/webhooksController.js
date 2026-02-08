@@ -1,21 +1,25 @@
+// routes/webhooks.js o donde tengas tu controlador
 import { handleMpWebhookService } from "./webhooksService.js";
 
 export const mercadopagoWebhook = async (req, res) => {
-    try {
-        console.log(req);
-        const paymentId =
-            req.body?.data?.id ||
-            req.query?.id;
+    // 1. Responder 200 inmediatamente. MP es impaciente.
+    res.sendStatus(200);
 
-        if (!paymentId) {
-            return res.sendStatus(200);
+    try {
+        // En la v2, MP envía el tipo de evento en 'type' o 'topic'
+        const type = req.body?.type || req.query?.topic;
+        const paymentId = req.body?.data?.id || req.query?.id;
+
+        // 2. Solo procesamos si es un evento de pago
+        if (type === "payment" && paymentId) {
+            console.log(`Webhook recibido: Procesando pago ${paymentId}...`);
+            await handleMpWebhookService(paymentId);
+        } else {
+            console.log(`Webhook ignorado: Tipo de evento "${type}" no es de pago.`);
         }
 
-        await handleMpWebhookService(paymentId);
-        res.sendStatus(200);
     } catch (error) {
-        console.error("Webhook error:", error);
-        res.sendStatus(200); // SIEMPRE 200 (MP reintenta)
+        // Solo logueamos el error, el 200 ya se envió para detener reintentos
+        console.error("Webhook error:", error.message);
     }
 };
-
