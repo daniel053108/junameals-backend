@@ -69,7 +69,8 @@ router.post("/", async (req, res) => {
             secure: true,
             sameSite: "lax",
             maxAge: 24 * 60 * 60 * 1000,
-            domain: ".junameals.com"
+            domain: ".junameals.com",
+            path: "/"
         }
     )
 
