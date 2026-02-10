@@ -36,6 +36,14 @@ router.get("/getMyOrders", authMiddleware, async (req, res) => {
             [userId]
         );
 
+        for(const order of orders){
+            const { rows: address} = await pool.query(
+                `SELECT * from addresses WHERE id = $1`,[orders.address_id]
+            );
+
+            order.address = address;
+        };
+
         for (const order of orders) {
             const { rows: items } = await pool.query(
                 `
@@ -75,6 +83,14 @@ router.get("/getOrders", authMiddleware, async (req, res) => {
             ORDER BY created_at DESC
             `,
         );
+
+        for(const order of orders){
+            const { rows: address} = await pool.query(
+                `SELECT * from addresses WHERE id = $1`,[orders.address_id]
+            );
+
+            order.address = address;
+        };
 
         for (const order of orders) {
             const { rows: items } = await pool.query(
@@ -140,6 +156,63 @@ router.put("/updateStatusOrder/:orderId", authMiddleware, async (req,res) => {
     }
 });
 
+router.post("/updateOrderAddress/:orderId", authMiddleware, async (req,res) => {
+    const orderId = req.params.orderId;
+    const addressId = req.body.id;
+    const userId = req.user.id;
+
+    try{
+
+        const {rows:address} = await pool.query(
+            "SELECT * FROM addresses WHERE id = $1",
+            [addressId]
+        );
+
+        if(address.length === 0){
+            throw new Error("No existe la direccion");
+        }
+
+        await pool.query(
+            "UPDATE orders SET address_id = $1 WHERE id = $2 AND user_id = $3",
+            [address[0].id, orderId, userId]
+        )
+
+        res.status(200).json({message: "Direccion actualizada correctamente"});
+    }catch(error){
+        console.error(error);
+        res.status(500).json({error: "Error del servidor al actualizar la direccion de la orden"});
+    }
+});
+
+router.put("/canceled-order/:orderId", authMiddleware, async (req,res) => {
+    const orderId = req.params.orderId;
+
+    try{
+        if(!orderId){
+            throw new Error("Id no existente");
+        }
+
+        const {rows} = await pool.query(
+            "SELECT * FROM orders WHERE id = $1",
+            [orderId]
+        )
+
+        if(rows.length === 0){
+            throw new Error("La orden no existe");
+        }
+
+        await pool.query(
+            "UPDATE orders SET status = 'canceled' WHERE id = $1",
+            [rows[0].id]
+        );
+
+        res.sendStatus(200);
+    }catch(error){
+        console.log(error);
+        res.status(500).json({error : "Error del servidor al cancelar orden"});
+    }
+});
+
 router.get("/:orderId", authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const { orderId } = req.params;
@@ -158,6 +231,14 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
             return res.status(404).json({ message: "Pedido no encontrado" });
         }
 
+        const { rows: address} = await pool.query(
+            `SELECT * from addresses WHERE id = $1`,[rows[0].address_id]
+        );
+
+        if(address.length === 0){
+          return res.status(404).json({error: "Direccion no existente"});  
+        };
+
         const { rows: items } = await pool.query(
             `
             SELECT 
@@ -175,12 +256,15 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
             [orderId]
         );
 
-        res.json({ ...rows[0], items });
+        const addressOrder = address[0];
+
+        res.json({ ...rows[0], items, address:addressOrder });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Error al obtener la orden" });
     }
 });
+
 
 
 router.get("/:orderId/status", authMiddleware, async (req,res) => {

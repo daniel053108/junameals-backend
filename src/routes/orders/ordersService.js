@@ -28,11 +28,20 @@ export const createOrderService = async (userId, items) => {
             total += p.price * itemsMap[p.id];
         });
 
+        const {rows: addressId} = await client.query(
+            `SELECT id FROM addresses WHERE user_id = $1 AND is_default = true`,
+            [userId]
+        );
+
+        if(addressId.length === 0){
+            throw new Error("No existe direcciones principal");
+        };
+
         const { rows: [order] } = await client.query(
-            `INSERT INTO orders (user_id, total_amount, status)
-             VALUES ($1, $2, 'pending')
+            `INSERT INTO orders (user_id, address_id, total_amount, status)
+             VALUES ($1, $2, $3, 'pending')
              RETURNING *`,
-            [userId, total]
+            [userId, addressId[0].id, total]
         );
 
         for (const p of products) {
@@ -54,6 +63,7 @@ export const createOrderService = async (userId, items) => {
         return order;
 
     } catch (error) {
+        console.log(error);
         await client.query("ROLLBACK");
         throw error;
     } finally {

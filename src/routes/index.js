@@ -6,6 +6,7 @@ import routerOrders from "./orders/index.js";
 import routerPayments from "./payments/index.js";
 import routerWebhooks from "./webhooks/index.js";
 import routerImages from "./images/index.js";
+import routerAddresses from "./addresses/addressController.js";
 
 const router = express.Router();
 
@@ -22,5 +23,7 @@ router.use("/orders", routerOrders);
 router.use("/payments", routerPayments);
 
 router.use("/webhooks", routerWebhooks);
+
+router.use("/addresses", routerAddresses);
 
 export default router;
