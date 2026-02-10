@@ -1,34 +1,34 @@
 import bcrypt from "bcrypt";
-import  express from "express";
+import express from "express";
 import jwt from "jsonwebtoken";
 import pool from "../../db.js";
 
 const router = express.Router();
 
 router.post("/", async (req, res) => {
-    const {user_email, password} = req.body;
+    const { user_email, password } = req.body;
 
-    if(!user_email || !password){
+    if (!user_email || !password) {
         return res.status(400).json({
             error: "Todos los campos son obligatorios",
         });
-    };
+    }
 
     const usersExist = await pool.query(
-        "SELECT id,name,email,password_hash,role FROM users WHERE email = $1 OR name = $1",
+        "SELECT id, name, email, phone_number, password_hash, role FROM users WHERE email = $1 OR name = $1",
         [user_email]
     );
-    
-    if(usersExist.rows.length === 0){
+
+    if (usersExist.rows.length === 0) {
         return res.status(400).json({
             error: "Credenciales Invalidas",
         });
     }
 
     const user = usersExist.rows[0];
-    const userValid = await bcrypt.compare(password,user.password_hash);
+    const userValid = await bcrypt.compare(password, user.password_hash);
 
-    if(!userValid){
+    if (!userValid) {
         return res.status(400).json({
             error: "Credenciales Invalidas",
         });
@@ -37,17 +37,17 @@ router.post("/", async (req, res) => {
     const userCart = await pool.query(
         "SELECT id FROM carts WHERE user_id = $1",
         [user.id]
-    )
-     
+    );
+
     let cartId;
 
-    if(userCart.rows.length === 0){
+    if (userCart.rows.length === 0) {
         const newCart = await pool.query(
             "INSERT INTO carts(user_id) VALUES ($1) RETURNING id",
             [user.id]
         );
         cartId = newCart.rows[0].id;
-    }else{
+    } else {
         cartId = userCart.rows[0].id;
     }
 
@@ -56,26 +56,33 @@ router.post("/", async (req, res) => {
             id: user.id,
             role: user.role,
             name: user.name,
-            email: user.email, 
+            email: user.email,
+            phone_number: user.phone_number,
             id_cart: cartId
         },
         process.env.JWT_SECRET,
-        {expiresIn: "1d"}
+        { expiresIn: "1d" }
     );
 
-    res.cookie(
-        "token", token,{
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            maxAge: 24 * 60 * 60 * 1000,
-            domain: ".junameals.com",
-            path: "/"
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000,
+        domain: ".junameals.com",
+        path: "/"
+    });
+
+    return res.json({
+        message: "Inicio de Sesion Valido",
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone_number: user.phone_number,
+            role: user.role
         }
-    )
-
-    return res.json({message: "Inicio de Sesion Valido", user: user })
-
+    });
 });
 
 export default router;

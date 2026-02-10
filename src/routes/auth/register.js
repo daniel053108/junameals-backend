@@ -4,23 +4,34 @@ import pool from "../../db.js";
 
 const router = express.Router();
 
-router.post("/", async (req,res) => {
-    try{
-        const { user_name, email, password } = req.body;
+router.post("/", async (req, res) => {
+    try {
+        const { user_name, email, password, phone_number } = req.body;
 
-        if(!user_name || !email || !password){
+        // 🔒 Validación de campos obligatorios
+        if (!user_name || !email || !password || !phone_number) {
             return res.status(400).json({
                 error: "Todos los campos son obligatorios",
             });
         }
 
-        if(password.length < 8){
+        // 📱 Validación básica de teléfono
+        const phoneRegex = /^\+?[0-9 ]{7,20}$/;
+        if (!phoneRegex.test(phone_number)) {
             return res.status(400).json({
-                error: "La contraseña nueva debe tener mínimo 8 caracteres, una mayúscula y un carácter especial",
-            })
+                error: "Número de teléfono no válido",
+            });
         }
-        
-        const strongPassword = /^(?=.*[A-Z])(?=.*[_!@#$%^&*(),.?":{}|<>]).{8,}$/.test(password);
+
+        // 🔐 Validación de contraseña
+        if (password.length < 8) {
+            return res.status(400).json({
+                error: "La contraseña debe tener mínimo 8 caracteres, una mayúscula y un carácter especial",
+            });
+        }
+
+        const strongPassword =
+            /^(?=.*[A-Z])(?=.*[_!@#$%^&*(),.?":{}|<>]).{8,}$/.test(password);
 
         if (!strongPassword) {
             return res.status(400).json({
@@ -28,35 +39,45 @@ router.post("/", async (req,res) => {
             });
         }
 
-        const userExist = await pool.query("SELECT id FROM users WHERE email = $1 OR name = $2", [email,user_name]);
+        // 🔎 Verificar si ya existe usuario, email o teléfono
+        const userExist = await pool.query(
+            "SELECT id FROM users WHERE email = $1 OR name = $2 OR phone_number = $3",
+            [email, user_name, phone_number]
+        );
 
-        if(userExist.rows.length > 0){
+        if (userExist.rows.length > 0) {
             return res.status(400).json({
-                error: "El correo o nombre de usuario ya han sido registrados",
+                error: "El correo, nombre de usuario o teléfono ya están registrados",
             });
         }
 
-        const passwordHash = await bcrypt.hash(password,10);
+        // 🔐 Hash de contraseña
+        const passwordHash = await bcrypt.hash(password, 10);
 
+        // 👤 Crear usuario
         const result = await pool.query(
-            "INSERT INTO users(name,email,password_hash) VALUES ($1,$2,$3) RETURNING id, name, email", 
-            [user_name, email, passwordHash]);
-        
-        const resultCart = await pool.query(
-            "INSERT INTO carts(user_id) VALUES ($1) RETURNING id",
+            `INSERT INTO users (name, email, password_hash, phone_number)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, name, email, phone_number`,
+            [user_name, email, passwordHash, phone_number]
+        );
+
+        // 🛒 Crear carrito
+        await pool.query(
+            "INSERT INTO carts (user_id) VALUES ($1)",
             [result.rows[0].id]
-        );    
+        );
 
         res.status(201).json({
             user: result.rows[0],
         });
 
-    }catch(error){
-        console.log(error);
+    } catch (error) {
+        console.error(error);
         res.status(500).json({
             error: "Error intentando registrar usuario",
         });
     }
-})
+});
 
 export default router;

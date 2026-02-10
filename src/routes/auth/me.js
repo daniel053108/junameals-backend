@@ -15,7 +15,7 @@ router.get("/getUser", authMiddleware, async (req,res) => {
     const user = req.user;
     try{
         const userData = await pool.query(
-            "SELECT id, name, email FROM users WHERE id = $1",
+            "SELECT id, name, email, phone_number FROM users WHERE id = $1",
             [user.id]
         );
 
@@ -33,6 +33,7 @@ router.get("/getUser", authMiddleware, async (req,res) => {
             role: user.role,
             name: userData.rows[0].name,
             email: userData.rows[0].email,
+            phone_number: userData.rows[0].phone_number,
             id_cart: userCart.rows[0].id
         });
     }catch{
@@ -140,4 +141,41 @@ router.put("/updateEmail", authMiddleware, async (req, res) => {
         return res.status(500).json({error: "Error al actualizar el email del usuario"});
     }
 });
+
+router.put("/updatePhoneNumber", authMiddleware, async (req, res) => {
+    const userId = req.user.id;
+    const { phone_number } = req.body;
+
+    try {
+        if (!phone_number) {
+            return res.status(400).json({
+                error: "Número telefónico no válido",
+            });
+        }
+
+        // Validación básica (internacional)
+        const phoneRegex = /^\+?[0-9 ]{7,20}$/;
+
+        if (!phoneRegex.test(phone_number)) {
+            return res.status(400).json({
+                error: "Formato de número telefónico inválido",
+            });
+        }
+
+        await pool.query(
+            "UPDATE users SET phone_number = $1 WHERE id = $2",
+            [phone_number, userId]
+        );
+
+        return res.status(200).json({
+            message: "Número telefónico actualizado correctamente",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            error: "Error al actualizar el número telefónico",
+        });
+    }
+});
+
 export default router;
