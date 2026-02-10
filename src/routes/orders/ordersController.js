@@ -28,21 +28,16 @@ router.get("/getMyOrders", authMiddleware, async (req, res) => {
     try {
         const { rows: orders } = await pool.query(
             `
-            SELECT *
-            FROM orders
-            WHERE user_id = $1
-            ORDER BY created_at DESC
+            SELECT 
+                o.*,
+                row_to_json(a) AS address
+            FROM orders o
+            LEFT JOIN addresses a ON a.id = o.address_id
+            WHERE o.user_id = $1
+            ORDER BY o.created_at DESC
             `,
             [userId]
         );
-
-        for(const order of orders){
-            const { rows: address} = await pool.query(
-                `SELECT * from addresses WHERE id = $1`,[orders.address_id]
-            );
-
-            order.address = address[0];
-        };
 
         for (const order of orders) {
             const { rows: items } = await pool.query(
@@ -73,24 +68,17 @@ router.get("/getMyOrders", authMiddleware, async (req, res) => {
 });
 
 router.get("/getOrders", authMiddleware, async (req, res) => {
-    const userId = req.user.id;
-
     try {
         const { rows: orders } = await pool.query(
             `
-            SELECT *
-            FROM orders
-            ORDER BY created_at DESC
-            `,
+            SELECT 
+                o.*,
+                row_to_json(a) AS address
+            FROM orders o
+            LEFT JOIN addresses a ON a.id = o.address_id
+            ORDER BY o.created_at DESC
+            `
         );
-
-        for(const order of orders){
-            const { rows: address} = await pool.query(
-                `SELECT * from addresses WHERE id = $1`,[orders.address_id]
-            );
-
-            order.address = address[0];
-        };
 
         for (const order of orders) {
             const { rows: items } = await pool.query(
@@ -220,9 +208,12 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
     try {
         const { rows } = await pool.query(
             `
-            SELECT *
-            FROM orders
-            WHERE id = $1 AND user_id = $2
+            SELECT 
+                o.*,
+                row_to_json(a) AS address
+            FROM orders o
+            LEFT JOIN addresses a ON a.id = o.address_id
+            WHERE o.id = $1 AND o.user_id = $2
             `,
             [orderId, userId]
         );
@@ -230,14 +221,6 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
         if (!rows.length) {
             return res.status(404).json({ message: "Pedido no encontrado" });
         }
-
-        const { rows: address} = await pool.query(
-            `SELECT * from addresses WHERE id = $1`,[rows[0].address_id]
-        );
-
-        if(address.length === 0){
-          return res.status(404).json({error: "Direccion no existente"});  
-        };
 
         const { rows: items } = await pool.query(
             `
@@ -256,16 +239,15 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
             [orderId]
         );
 
-        const addressOrder = address[0];
-
-        res.json({ ...rows[0], items, address:addressOrder });
+        res.json({
+            ...rows[0],
+            items
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Error al obtener la orden" });
     }
 });
-
-
 
 router.get("/:orderId/status", authMiddleware, async (req,res) => {
    const userId = req.user.id;
