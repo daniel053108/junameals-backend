@@ -41,7 +41,7 @@ router.get("/getMyOrders", authMiddleware, async (req, res) => {
                 `SELECT * from addresses WHERE id = $1`,[orders.address_id]
             );
 
-            order.address = address;
+            order.address = address[0];
         };
 
         for (const order of orders) {
@@ -89,7 +89,7 @@ router.get("/getOrders", authMiddleware, async (req, res) => {
                 `SELECT * from addresses WHERE id = $1`,[orders.address_id]
             );
 
-            order.address = address;
+            order.address = address[0];
         };
 
         for (const order of orders) {

@@ -46,6 +46,7 @@ export const createMpPreferenceService = async (user, orderId) => {
             pending: `${process.env.FRONTEND_URL}/payment/pending?orderId=${orderId}`
         },
         payer:{
+            name: user.name,
             email: user.email
         },
         statement_descriptor: "JUNAMEALS",
