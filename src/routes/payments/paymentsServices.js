@@ -42,7 +42,7 @@ export const createMpPreferenceService = async (user, orderId) => {
             },
         back_urls: {
             success: `${process.env.FRONTEND_URL}/payment/success`,
-            failure: `${process.env.FRONTEND_URL}/payment/error`,
+            failure: `${process.env.FRONTEND_URL}/payment/error?orderId=${orderId}`,
             pending: `${process.env.FRONTEND_URL}/payment/pending?orderId=${orderId}`
         },
         payer:{
