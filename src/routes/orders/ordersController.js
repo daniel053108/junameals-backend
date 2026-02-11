@@ -70,14 +70,19 @@ router.get("/getMyOrders", authMiddleware, async (req, res) => {
 router.get("/getOrders", authMiddleware, async (req, res) => {
     try {
         const { rows: orders } = await pool.query(
-            `
-            SELECT 
-                o.*,
-                row_to_json(a) AS address
-            FROM orders o
-            LEFT JOIN addresses a ON a.id = o.address_id
-            ORDER BY o.created_at DESC
-            `
+                `SELECT 
+                    o.*,
+                    row_to_json(a) AS address,
+                    json_build_object(
+                        'email', u.email,
+                        'name', u.name,
+                        'role', u.role,
+                        'phone_number', u.phone_number
+                    ) AS user
+                FROM orders o
+                LEFT JOIN addresses a ON a.id = o.address_id
+                LEFT JOIN users u ON u.id = o.user_id
+                ORDER BY o.created_at DESC`
         );
 
         for (const order of orders) {
