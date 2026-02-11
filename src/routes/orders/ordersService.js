@@ -33,15 +33,16 @@ export const createOrderService = async (userId, items) => {
             [userId]
         );
 
-        if(addressId.length === 0){
+        //DESCOMENTAR PARA DIRECCIONES
+        /*if(addressId.length === 0){
             throw new Error("No existe direcciones principal");
-        };
+        };*/
 
         const { rows: [order] } = await client.query(
             `INSERT INTO orders (user_id, address_id, total_amount, status)
              VALUES ($1, $2, $3, 'pending')
              RETURNING *`,
-            [userId, addressId[0].id, total]
+            [userId, /*addressId[0].id DESCOMENTAR PARA DIRECCIONES*/0, total]
         );
 
         for (const p of products) {
