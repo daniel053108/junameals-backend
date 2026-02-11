@@ -21,6 +21,11 @@ router.get("/", async (req, res) => {
 router.get("/recommended", async (req,res) => {
     try{
         const result = await pool.query("SELECT * FROM products WHERE recommended = true AND available = true");
+        
+        if(result.rows.length === 0){
+            return res.status(400).json({error: "No se encontraron productos recomendados"})
+        }
+
         res.json(result.rows);
     }catch(error){
         console.log(error);
