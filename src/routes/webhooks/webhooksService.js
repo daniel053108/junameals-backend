@@ -48,18 +48,24 @@ export const handleMpWebhookService = async (paymentId) => {
         );
 
         if (existing.length) {
-            console.log(`Pago ${providerId} ya estaba procesado. Saltando...`);
-            await dbClient.query("ROLLBACK");
-            return;
+            //3. Si fue registrado lo actualizamos
+            await dbClient.query(
+                `UPDATE payments 
+                SET status = $1,
+                    raw_response = $2
+                WHERE provider = 'mercadopago' 
+                AND provider_payment_id = $3`,
+                [status, JSON.stringify(payment), String(providerId)]
+            );
+        } else {
+            //4. Registrar el Pago
+            await dbClient.query(
+                `INSERT INTO payments 
+                (order_id, provider, provider_payment_id, status, amount, currency, raw_response)
+                VALUES ($1, 'mercadopago', $2, $3, $4, $5, $6)`,
+                [orderId, String(providerId), status, transaction_amount, currency_id, JSON.stringify(payment)]
+            );
         }
-
-        // 4. Registrar el pago
-        await dbClient.query(
-            `INSERT INTO payments 
-            (order_id, provider, provider_payment_id, status, amount, currency, raw_response)
-            VALUES ($1, 'mercadopago', $2, $3, $4, $5, $6)`,
-            [orderId, String(providerId), status, transaction_amount, currency_id, JSON.stringify(payment)]
-        );
 
         // 5. Actualizar estado del pedido
         if (order.status !== "paid") {
