@@ -190,7 +190,7 @@ router.put("/canceled-order/:orderId", authMiddleware, async (req,res) => {
         }
 
         await pool.query(
-            "UPDATE orders SET status = 'canceled' WHERE id = $1",
+            "UPDATE orders SET status = 'canceled' WHERE id = $1 AND status = 'pending'",
             [rows[0].id]
         );
 
